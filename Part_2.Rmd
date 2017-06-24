@@ -1,0 +1,128 @@
+---
+title: 'Statistical Inference: Peer Assessment Part 2'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Part 2: Basic Inferential Analysis
+
+### Overview
+
+In the second part of the project, the ToothGrowth data in the R datasets package will be analysed.
+The toothgrowth dataset shows the effect of Vitamin C on Tooth Growth in Guinea Pigs.
+
+1. Load the ToothGrowth data and perform some basic exploratory data analyses
+2. Provide a basic summary of the data.
+3. Use confidence intervals and/or hypothesis tests to compare tooth growth by supp and dose. (Only use the techniques from class, even if there's other approaches worth considering)
+4. State your conclusions and the assumptions needed for your conclusions.
+
+
+### Load the ToothGrowth data and perform basic exploratory data analysis
+
+*load libraries*
+```{r libraries}
+library(knitr)
+library(ggplot2)
+library(datasets)
+```
+
+*basic exploratory data analysis*
+
+```{r tables}
+data("ToothGrowth")
+dim(ToothGrowth)
+summary(ToothGrowth)
+ToothGrowth$dose <- as.factor(ToothGrowth$dose)
+str(ToothGrowth)
+head(ToothGrowth, 10)
+tail(ToothGrowth, 10)
+table(ToothGrowth$supp, ToothGrowth$dose)
+pairs(ToothGrowth)
+```
+
+From the matrix of scatterplots made with the function "pairs()" it seems to be interesting to make some boxplots with ggplot2 in order to see the relationship between Tooth length (len), Dose levels of vitamin C (dose in mg/day) and supplement type (supp): VC = ascorbic acid and OJ = orange juice.
+
+```{r boxplots}
+box_plot <- ggplot(ToothGrowth, aes(x = supp, y = len, fill = supp)) +
+  geom_boxplot() +
+  labs(title = "Relationship tooth length and supp for all doses at once",
+       x = "Supplement type", y = "Tooth length")
+
+levels(ToothGrowth$supp) <- c("Orange Juice", "Ascorbic Acid")
+box_plot_panels <- ggplot(ToothGrowth, aes(x = dose, y = len, fill = dose)) +
+  geom_boxplot() +
+  facet_grid(. ~ supp) +
+  labs(title = "Relationship tooth length and dose for each type of supplement",
+       x = "Dose", y = "Tooth length")
+
+box_plot
+box_plot_panels
+```
+
+### Basic summary of the data
+
+The basic exploratory data analysis above shows that the ToothGrowth data has 60 observations and 3 variables: len, supp and dose. Len is numeric, Supp is a factor with 2 levels (OJ and VC) and Dose is numeric with three levels of vitamin C (0,5; 1 and 2 mg/day). 
+
+The first boxplot seems to show that tooth growth increases more with orange juice than with ascorbic acid for all dose levels at once. 
+
+Furthermore, it seems that the mean toothlength is higher with orange juice than with ascorbic acid for the dose levels 0,5 and 1 mg/day. For dose level 2 mg/day the mean tooth lengths seem to be close to each other for orange juice and ascorbic acid.
+
+Let's test this in the paragraph below.
+
+
+### Confidence intervals and hypothesis tests
+
+*Hypothesis 1*
+
+H0: the supplement type has no impact on the tooth growth for all doses at once.
+Ha: the supplement orange juice has more impact on the tooth growth for all doses at once.
+
+```{r hyp 1}
+OrJ <- subset(ToothGrowth, supp == "Orange Juice")
+AsA <- subset(ToothGrowth, supp == "Ascorbic Acid")
+t.test(OrJ$len, AsA$len, paired = FALSE, alternative = "greater")
+```
+The null hypothesis, H0, can be rejected on basis of the t-test results. The hypothesis Ha, the alternative, can be accepted.
+
+*Hypothesis 2 to 4*
+
+For the dose levels 0.5, 1 and 2 mg/day, the next 3 tests will be done.
+H0: the supplement type has no impact on the tooth growth for the tested dose level.
+Ha: the supplement orange juice has more impact on the tooth growth for the tested dose level.
+
+Because there is multiple-testing a BH (Benjamin & Hochberg) correction will be used as adjustment method.
+
+```{r hyp different doses}
+Hyp <- c()
+Hyp[1] <- t.test(OrJ[OrJ$dose == 0.5,]$len, AsA[AsA$dose == 0.5,]$len, paired = FALSE, alternative = "greater")$p.value
+Hyp[2] <- t.test(OrJ[OrJ$dose == 1,]$len, AsA[AsA$dose == 1,]$len, paired = FALSE, alternative = "greater")$p.value
+Hyp[3] <- t.test(OrJ[OrJ$dose == 2,]$len, AsA[AsA$dose == 2,]$len, paired = FALSE, alternative = "greater")$p.value
+p.adjust(Hyp, method = "BH")
+```
+See the next paragraph for the conclusions.
+
+
+### Conclusions and assumptions
+
+*Assumptions*
+
++ The subjects (guinea pigs) that got the different 3 dose levels in combination with the different 2 supplement types are supposed to be different. So the 6 groups are independent and not paired (paired = FALSE)
++ The mean tooth length is supposed to be distributed normal
++ The guinea pigs are representative for the total population of guinea pigs
+
+
+*Conclusions*
+
+With the t-tests is shown that:
+
++ the supplement orange juice has more impact on the tooth growth for all doses at once
++ the supplement orange juice has more impact on the tooth growth for dose level 0.5 mg/day, because the null hypothesis is rejected by the p-value of 0.004768955
++ the supplement orange juice has more impact on the tooth growth for dose level 1 mg/day, because the null hypothesis is rejected by the p-value of 0.001557564
++ the supplement type has no impact on the tooth growth for dose level 2 mg/day, because the null hypothesis is accepted by the p-value of 0.518074206.
+
+
+
+
